@@ -1,6 +1,7 @@
 package com.flowingsun.tacticalmap.network;
 
 import com.flowingsun.tacticalmap.TacticalMap;
+import com.flowingsun.tacticalmap.util.SyncActionGenerator;
 import dev.ftb.mods.ftbchunks.api.FTBChunksAPI;
 import dev.ftb.mods.ftbchunks.api.client.waypoint.Waypoint;
 import net.minecraft.core.BlockPos;
@@ -11,11 +12,11 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class WaypointSyncPacket {
-    private final int action;
+    private final byte action;
     private final String name;
     private final BlockPos pos;
 
-    public WaypointSyncPacket(Waypoint wp, int action) {
+    public WaypointSyncPacket(Waypoint wp, byte action) {
         this.action = action;
         this.name = wp.getName();
         this.pos = wp.getPos();
@@ -45,9 +46,9 @@ public class WaypointSyncPacket {
                     // 开启同步标志，防止 Mixin 再次拦截导致无限发包
                     TacticalMap.IS_SYNCING.set(true);
                     try {
-                        if (WaypointAction.fromCode(this.action) == WaypointAction.ADD) {
+                        if (SyncActionGenerator.getSyncAction(this.action).equals(SyncActionGenerator.SyncAction.ADD)) {
                             manager.addWaypointAt(this.pos, this.name);
-                        } else {
+                        } else if (SyncActionGenerator.getSyncAction(this.action).equals(SyncActionGenerator.SyncAction.DELETE)) {
                             for (Waypoint waypoint : manager.getAllWaypoints()) {
                                 if (waypoint.getPos().atY(0).equals(this.pos.atY(0))) {
                                     manager.removeWaypoint(waypoint);
