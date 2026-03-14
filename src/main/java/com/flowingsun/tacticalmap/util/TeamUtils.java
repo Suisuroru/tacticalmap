@@ -1,12 +1,10 @@
 package com.flowingsun.tacticalmap.util;
 
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
-import dev.ftb.mods.ftbteams.api.client.KnownClientPlayer;
 import dev.ftb.mods.ftbteams.api.Team;
+import dev.ftb.mods.ftbteams.api.client.KnownClientPlayer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 
 import java.util.Optional;
 import java.util.UUID;

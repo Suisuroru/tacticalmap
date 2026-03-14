@@ -15,7 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = EntityMapIcon.class, remap = false)
 public abstract class EntityMapIconMixin {
-    @Shadow @Final private Entity entity;
+    @Shadow
+    @Final
+    private Entity entity;
 
     @Inject(method = "isVisible", at = @At("HEAD"), cancellable = true)
     private void onIsVisible(MapType mapType, double distanceToPlayer, boolean outsideVisibleArea, CallbackInfoReturnable<Boolean> cir) {
