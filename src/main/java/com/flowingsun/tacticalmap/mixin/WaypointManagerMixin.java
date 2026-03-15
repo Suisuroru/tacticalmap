@@ -25,7 +25,7 @@ public class WaypointManagerMixin {
     private void onRemoveWaypoint(WaypointImpl waypoint, CallbackInfo ci) {
         if (!TacticalMap.IS_SYNCING.get()) {
             TacticalMap.LOGGER.info("[TacticalMap] 检测到路径点删除: {}", waypoint.getName());
-            TacticalMap.CHANNEL.sendToServer(new WaypointSyncPacket(waypoint, SyncActionGenerator.generate(SyncActionGenerator.SyncAction.ADD, SyncActionGenerator.SideFlag.C2S)));
+            TacticalMap.CHANNEL.sendToServer(new WaypointSyncPacket(waypoint, SyncActionGenerator.generate(SyncActionGenerator.SyncAction.DELETE, SyncActionGenerator.SideFlag.C2S)));
         }
     }
 }
