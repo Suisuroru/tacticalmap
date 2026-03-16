@@ -30,7 +30,7 @@ public class WaypointSyncPacket {
      * When minor version updated, the protocol should be something compatible with old version, but not fully supported with new version
      * When patch version updated, the protocol should be fully compatible with old version, but something like text or implementation should be changed
      */
-    private static final String LOCAL_PROTOCOL_VERSION_STRING = "1.0.1";
+    private static final String LOCAL_PROTOCOL_VERSION_STRING = "1.0.2";
     private static final IntList LOCAL_PROTOCOL_VERSION = createProtocolVersion(LOCAL_PROTOCOL_VERSION_STRING); // if you edited this file, you need to bump PROTOCOL_VERSION
 
     private final String name;
@@ -52,21 +52,31 @@ public class WaypointSyncPacket {
     public WaypointSyncPacket(FriendlyByteBuf buf) {
         this.protocolVersion = buf.readIntIdList();
         verifyProtocolVersion();
-        if (this.functionEnable.equals(FunctionEnable.NONE)) { // 完全不兼容时，直接禁用，不要读取，防止报错
-            this.name = null;
-            this.pos = null;
-            this.color = -1;
-            this.syncAction = null;
-            this.sideFlag = null;
-            return;
+        String name = null;
+        BlockPos pos = null;
+        int color = -1;
+        SyncActionGenerator.SyncAction syncAction = null;
+        SyncActionGenerator.SideFlag sideFlag = null;
+        if (!this.functionEnable.equals(FunctionEnable.NONE)) { // 完全不兼容时，直接禁用，不要读取，防止报错
+            try {
+                name = buf.readUtf();
+                pos = BlockPos.of(buf.readLong());
+                long data = buf.readLong();
+                color = (int) (data >> ACTION_BITS);
+                byte actionByte = (byte) (data & ACTION_MASK);
+                syncAction = SyncActionGenerator.getSyncAction(actionByte);
+                sideFlag = SyncActionGenerator.getSideFlag(actionByte);
+            } catch (Exception e) {
+                if (functionEnable.equals(FunctionEnable.FULL)) {
+                    throw e;
+                }
+            }
         }
-        this.name = buf.readUtf();
-        this.pos = BlockPos.of(buf.readLong());
-        long data = buf.readLong();
-        this.color = (int) (data >> ACTION_BITS);
-        byte actionByte = (byte) (data & ACTION_MASK);
-        this.syncAction = SyncActionGenerator.getSyncAction(actionByte);
-        this.sideFlag = SyncActionGenerator.getSideFlag(actionByte);
+        this.name = name;
+        this.pos = pos;
+        this.color = color;
+        this.syncAction = syncAction;
+        this.sideFlag = sideFlag;
     }
 
     public WaypointSyncPacket(String name, BlockPos pos, long data) {
@@ -112,7 +122,7 @@ public class WaypointSyncPacket {
         if (functionEnable.equals(FunctionEnable.UNDEFINE)) {
             verifyProtocolVersion();
         }
-        if (functionEnable.equals(FunctionEnable.NONE)) return; // 不兼容时，直接禁用
+        if (functionEnable.equals(FunctionEnable.NONE) || this.pos == null) return; // 不兼容时，直接禁用
         ctx.get().enqueueWork(() -> {
             ServerPlayer sender = ctx.get().getSender();
             if (this.sideFlag.equals(SyncActionGenerator.SideFlag.C2S)) {
@@ -128,10 +138,10 @@ public class WaypointSyncPacket {
                         if (this.syncAction == SyncActionGenerator.SyncAction.ADD) {
                             // 【修正逻辑】：
                             // 1. 调用 addWaypointAt 创建并自动添加路径点（它内部会处理所有复杂的构造参数）
-                            Waypoint wp = impl.addWaypointAt(this.pos, this.name);
+                            Waypoint wp = impl.addWaypointAt(this.pos, this.name == null ? "null" : this.name);
 
                             // 2. 转换为实现类设置颜色（源码显示 setColor 返回 WaypointImpl，支持链式调用）
-                            if (wp instanceof WaypointImpl wpImpl) {
+                            if (wp instanceof WaypointImpl wpImpl && this.color != -1) {
                                 wpImpl.setColor(color);
                                 // 3. 必须手动刷新图标，否则地图上显示的还是默认颜色
                                 wpImpl.refreshIcon();
